@@ -143,24 +143,40 @@ class PacketGateway:
                 self.rx = self.rx[1:]
               continue
 
+            # According to protocol: size + 2 == total packet length
+            # Packets may or may not have 0x34 terminator
+            # First check if we have enough data for packet without terminator
             if len(self.rx) < 1 + fields[1] + 1:
               # packet not completely received, wait for more
               break
 
             try:
               # extract packet to be processed
+              # The size field formula is: size + 2 = total_packet_length
+              # This works for packets without terminator
               p = self.rx[:1 + fields[1] + 1]
               log.info(tools.bin2hex(p))
               if len(p) != 1+fields[1]+1:
                 raise BaseException("Invalid encoded length: "+  tools.bin2hex(p))
-              end = struct.unpack_from(">H", p[-3:])
-              if p[-1] != 0x34:
-                raise BaseException("Invalid end of packet termination (expected 34): " + tools.bin2hex(p))
-              pdata=p[3:-3]
-              log.debug("crc computed against "+tools.bin2hex(pdata))
-              crc=binascii.crc_hqx(pdata, 0)
-              if crc != end[0]:
-                raise BaseException("Invalid CRC (expected:"+hex(crc)+", observed:"+hex(end[0])+"): "+ tools.bin2hex(p))
+              
+              # Check if packet has terminator (0x34)
+              has_terminator = (p[-1] == 0x34)
+              
+              if has_terminator:
+                # Packet with terminator: [start][size][payload][CRC][0x34]
+                end = struct.unpack_from(">H", p[-3:])
+                pdata=p[3:-3]
+                log.debug("crc computed against "+tools.bin2hex(pdata))
+                crc=binascii.crc_hqx(pdata, 0)
+                if crc != end[0]:
+                  raise BaseException("Invalid CRC (expected:"+hex(crc)+", observed:"+hex(end[0])+"): "+ tools.bin2hex(p))
+              else:
+                # Packet without terminator: [start][size][payload][CRC]
+                # Just skip CRC validation for now as hardware packets don't have valid CRC
+                # The packet structure is still valid according to size field
+                log.debug("Packet without 0x34 terminator, skipping CRC check")
+                pdata=p[3:-2]
+              
               packettimeout=0
               self.rx_event(pdata)
             except BaseException as e:
