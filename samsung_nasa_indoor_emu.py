@@ -20,7 +20,7 @@ def auto_int(x):
   return int(x, 0)
 
 argparser = argparse.ArgumentParser()
-argparser.add_argument('--serial-host', default="127.0.0.1",help="TCP host to connect to. Use 127.0.0.1 for local socat bridge (serial to TCP) or IP address of Ethernet to RS485 converter for direct TCP connection")
+argparser.add_argument('--serial-host', default="127.0.0.1", help="TCP host to connect to. Use 127.0.0.1 for local socat bridge (serial to TCP) or IP address of Ethernet to RS485 converter for direct TCP connection")
 argparser.add_argument('--serial-port', default="7002", type=auto_int, help="TCP port to connect to. Use port of socat bridge or Ethernet to RS485 converter")
 argparser.add_argument('--no-broadcast', action="store_true", help="avoid sending regular broadcast")
 args = argparser.parse_args()

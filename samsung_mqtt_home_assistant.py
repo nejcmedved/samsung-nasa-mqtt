@@ -32,7 +32,7 @@ parser.add_argument('--mqtt-port', default="1883", type=auto_int, help="port of 
 parser.add_argument('--mqtt-username', help="username to connect to the MQTT broker")
 parser.add_argument('--mqtt-password', help="password of the MQTT broker")
 parser.add_argument('--mqtt-tls', action="store_true", help="If the MQTT broker requires TLS connections")
-parser.add_argument('--serial-host', default="127.0.0.1",help="TCP host to connect to. Use 127.0.0.1 for local socat bridge (serial to TCP) or IP address of Ethernet to RS485 converter for direct TCP connection")
+parser.add_argument('--serial-host', default="127.0.0.1", help="TCP host to connect to. Use 127.0.0.1 for local socat bridge (serial to TCP) or IP address of Ethernet to RS485 converter for direct TCP connection")
 parser.add_argument('--serial-port', default="7001", type=auto_int, help="TCP port to connect to. Use port of socat bridge or Ethernet to RS485 converter")
 parser.add_argument('--nasa-interval', default="30", type=auto_int, help="Interval in seconds to republish MQTT values set from the MQTT side (useful for temperature mainly)")
 parser.add_argument('--nasa-timeout', default="120", type=auto_int, help="Timeout before considering communication fault")
