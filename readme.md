@@ -50,6 +50,27 @@ This method connects directly to an Ethernet-to-RS485 converter without needing 
 
 **Note:** Despite the parameter names (`--serial-host` and `--serial-port`), the application always uses TCP sockets for communication. The names are kept for backward compatibility.
 
+## NASA Protocol Test Tool
+
+A dedicated test tool is available for testing and debugging NASA protocol communication:
+
+```bash
+# Interactive mode for manual testing
+python nasa_test_tool.py --host 127.0.0.1 --port 7001 --interactive
+
+# Send specific commands
+python nasa_test_tool.py --host 127.0.0.1 --port 7001 --send-poke
+python nasa_test_tool.py --host 127.0.0.1 --port 7001 --send-read 0x406f
+```
+
+The test tool is useful for:
+- Testing communication with NASA devices
+- Debugging protocol issues
+- Exploring NASA protocol messages
+- Developing new features
+
+For full documentation, see [NASA_TEST_TOOL.md](NASA_TEST_TOOL.md).
+
 ## How to manual run
 Just execute the samsung_mqtt_home_assistant.py script after tweaking its values (extended configuration means to come)
 
