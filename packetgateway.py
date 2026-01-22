@@ -163,19 +163,20 @@ class PacketGateway:
               has_terminator = (p[-1] == 0x34)
               
               if has_terminator:
-                # Packet with terminator: [start][size][payload][CRC][0x34]
-                end = struct.unpack_from(">H", p[-3:])
-                pdata=p[3:-3]
+                # Packet with terminator: [0x32(1)][size(2)][payload][CRC(2)][0x34(1)]
+                # CRC is at bytes -3:-1 (2 bytes before terminator)
+                end = struct.unpack(">H", p[-3:-1])
+                pdata=p[3:-3]  # payload excludes: start(1) + size(2) + CRC(2) + term(1)
                 log.debug("crc computed against "+tools.bin2hex(pdata))
                 crc=binascii.crc_hqx(pdata, 0)
                 if crc != end[0]:
                   raise BaseException("Invalid CRC (expected:"+hex(crc)+", observed:"+hex(end[0])+"): "+ tools.bin2hex(p))
               else:
-                # Packet without terminator: [start][size][payload][CRC]
-                # Just skip CRC validation for now as hardware packets don't have valid CRC
-                # The packet structure is still valid according to size field
-                log.debug("Packet without 0x34 terminator, skipping CRC check")
-                pdata=p[3:-2]
+                # Packet without terminator: [0x32(1)][size(2)][payload][CRC(2)]
+                # Some hardware sends packets without 0x34 terminator
+                # For these packets, CRC validation is skipped as the CRC bytes may not be valid
+                log.warning("Packet without 0x34 terminator received, CRC check skipped: " + tools.bin2hex(p[-6:]))
+                pdata=p[3:-2]  # payload excludes: start(1) + size(2) + CRC(2)
               
               packettimeout=0
               self.rx_event(pdata)
