@@ -143,24 +143,42 @@ class PacketGateway:
                 self.rx = self.rx[1:]
               continue
 
+            # According to protocol: size + 2 == total packet length
+            # Packets may or may not have 0x34 terminator
+            # First check if we have enough data for packet without terminator
             if len(self.rx) < 1 + fields[1] + 1:
               # packet not completely received, wait for more
               break
 
             try:
               # extract packet to be processed
+              # The size field formula is: size + 2 = total_packet_length
+              # This works for packets without terminator
               p = self.rx[:1 + fields[1] + 1]
               log.info(tools.bin2hex(p))
               if len(p) != 1+fields[1]+1:
                 raise BaseException("Invalid encoded length: "+  tools.bin2hex(p))
-              end = struct.unpack_from(">H", p[-3:])
-              if p[-1] != 0x34:
-                raise BaseException("Invalid end of packet termination (expected 34): " + tools.bin2hex(p))
-              pdata=p[3:-3]
-              log.debug("crc computed against "+tools.bin2hex(pdata))
-              crc=binascii.crc_hqx(pdata, 0)
-              if crc != end[0]:
-                raise BaseException("Invalid CRC (expected:"+hex(crc)+", observed:"+hex(end[0])+"): "+ tools.bin2hex(p))
+              
+              # Check if packet has terminator (0x34)
+              has_terminator = (p[-1] == 0x34)
+              
+              if has_terminator:
+                # Packet with terminator: [0x32(1)][size(2)][payload][CRC(2)][0x34(1)]
+                # CRC is at bytes -3:-1 (2 bytes before terminator)
+                end = struct.unpack(">H", p[-3:-1])
+                pdata=p[3:-3]  # payload excludes: start(1) + size(2) + CRC(2) + term(1)
+                log.debug("crc computed against "+tools.bin2hex(pdata))
+                crc=binascii.crc_hqx(pdata, 0)
+                if crc != end[0]:
+                  raise BaseException("Invalid CRC (expected:"+hex(crc)+", observed:"+hex(end[0])+"): "+ tools.bin2hex(p))
+              else:
+                # Packet without terminator: [0x32(1)][size(2)][payload][CRC(2)]
+                # Some hardware sends packets without 0x34 terminator
+                # The last 2 bytes are still present but may not contain a valid CRC
+                # We still extract payload excluding those 2 bytes to maintain consistency
+                log.warning("Packet without 0x34 terminator received (showing last 6 bytes), CRC check skipped: " + tools.bin2hex(p[-6:] if len(p) >= 6 else p))
+                pdata=p[3:-2]  # payload excludes: start(1) + size(2) + last 2 bytes (CRC position)
+              
               packettimeout=0
               self.rx_event(pdata)
             except BaseException as e:
