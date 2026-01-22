@@ -43,6 +43,7 @@ class PacketGateway:
     self.gatewaysocket = None
     self.queue = queue.Queue()
     self.rxonly = rxonly
+    self.rx = b''
 
   def connect(self, host=None, port=None):
     with self.seriallock:
