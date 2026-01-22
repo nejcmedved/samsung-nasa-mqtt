@@ -174,9 +174,10 @@ class PacketGateway:
               else:
                 # Packet without terminator: [0x32(1)][size(2)][payload][CRC(2)]
                 # Some hardware sends packets without 0x34 terminator
-                # For these packets, CRC validation is skipped as the CRC bytes may not be valid
-                log.warning("Packet without 0x34 terminator received, CRC check skipped: " + tools.bin2hex(p[-6:]))
-                pdata=p[3:-2]  # payload excludes: start(1) + size(2) + CRC(2)
+                # The last 2 bytes are still present but may not contain a valid CRC
+                # We still extract payload excluding those 2 bytes to maintain consistency
+                log.warning("Packet without 0x34 terminator received (showing last 6 bytes), CRC check skipped: " + tools.bin2hex(p[-6:] if len(p) >= 6 else p))
+                pdata=p[3:-2]  # payload excludes: start(1) + size(2) + last 2 bytes (CRC position)
               
               packettimeout=0
               self.rx_event(pdata)
