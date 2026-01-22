@@ -104,6 +104,8 @@ socat /dev/ttyUSB0,raw,echo=0,nonblock,min=0,b9600,parenb tcp-listen:7001,reusea
 python nasa_test_tool.py --host 127.0.0.1 --port 7001
 ```
 
+**Note**: The `parenb` parameter enables even parity. Adjust serial settings to match your device configuration (typically 9600 baud, even parity for NASA protocol).
+
 ### Method 2: Direct TCP (Ethernet-to-RS485 Converter)
 
 If you have an Ethernet-to-RS485 converter:

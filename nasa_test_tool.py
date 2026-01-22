@@ -38,10 +38,11 @@ log = logging.getLogger("nasa_test_tool")
 class NasaTestTool:
     """NASA Protocol Test Tool for communicating with NASA devices via TCP/IP"""
     
-    def __init__(self, host, port, source_address="500000"):
+    def __init__(self, host, port, source_address="500000", response_timeout=3):
         self.host = host
         self.port = port
         self.source_address = source_address
+        self.response_timeout = response_timeout
         self.parser = NasaPacketParser()
         self.gateway = None
         self.running = False
@@ -73,15 +74,19 @@ class NasaTestTool:
     def connect(self):
         """Connect to the NASA device"""
         log.info(f"Connecting to {self.host}:{self.port}")
-        self.gateway = packetgateway.PacketGateway(
-            host=self.host,
-            port=self.port,
-            rx_event=self.rx_event_handler
-        )
-        self.gateway.start()
-        time.sleep(1)  # Give the gateway time to connect
-        log.info("Connected and listening for packets")
-        self.running = True
+        try:
+            self.gateway = packetgateway.PacketGateway(
+                host=self.host,
+                port=self.port,
+                rx_event=self.rx_event_handler
+            )
+            self.gateway.start()
+            time.sleep(1)  # Give the gateway time to connect
+            log.info("Connected and listening for packets")
+            self.running = True
+        except Exception as e:
+            log.error(f"Failed to connect: {e}")
+            raise
     
     def send_packet(self, packet_data):
         """Send a raw NASA packet (hex string or bytes)"""
@@ -267,6 +272,8 @@ Examples:
                         help='TCP port to connect to (default: 7001)')
     parser.add_argument('--source', type=str, default='500000',
                         help='Source address for NASA packets (default: 500000)')
+    parser.add_argument('--response-timeout', type=int, default=3,
+                        help='Timeout in seconds when waiting for responses (default: 3)')
     
     # Operation modes
     parser.add_argument('--interactive', '-i', action='store_true',
@@ -299,7 +306,7 @@ Examples:
     log.setLevel(args.log_level)
     
     # Create test tool
-    tool = NasaTestTool(args.host, args.port, args.source)
+    tool = NasaTestTool(args.host, args.port, args.source, args.response_timeout)
     
     # Handle Ctrl+C gracefully
     def signal_handler(sig, frame):
@@ -356,8 +363,8 @@ Examples:
         
         # If commands were executed, listen briefly for responses then exit
         elif command_executed:
-            log.info("Listening for responses for 3 seconds...")
-            tool.listen_mode(3)
+            log.info(f"Listening for responses for {tool.response_timeout} seconds...")
+            tool.listen_mode(tool.response_timeout)
         
         # If no specific command was given, just listen for a bit
         else:
