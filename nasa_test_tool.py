@@ -98,8 +98,8 @@ class NasaTestTool:
         """Send a read request for a specific message number"""
         log.info(f"Sending read request for message {hex(message_number)}")
         packet = nasa_forge(
-            instruction=0x14,  # normal mode, read
-            msg_value={message_number: None},
+            instruction=0x11,  # normal mode, read
+            msg_value={message_number: 0x05A5A5A5},  # Dummy value for read request
             dest=dest
         )
         return self.send_packet(packet)
@@ -108,7 +108,7 @@ class NasaTestTool:
         """Send a write request for a specific message number"""
         log.info(f"Sending write request for message {hex(message_number)} with value {value}")
         packet = nasa_forge(
-            instruction=0x14,  # normal mode, write  
+            instruction=0x12,  # normal mode, write
             msg_value={message_number: value},
             dest=dest
         )
