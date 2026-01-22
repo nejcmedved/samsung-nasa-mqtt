@@ -16,6 +16,40 @@ I've designed a PCB to allow for USB<->F3/F4 to allow for more people to play wi
 ### Through F1/F2 pair
 It allows extracting many information from the AHSP. Also it's not yet suited to fully control it through that link.
 
+## Communication Setup
+
+The application supports two communication methods:
+
+### Method 1: Serial via socat bridge (default)
+This method uses a USB-to-RS485 adapter connected to your device, with `socat` creating a TCP bridge.
+
+**Setup:**
+1. Connect your USB-to-RS485 adapter (e.g., F3/F4 USB adapter)
+2. Run the provided script which starts `socat` to bridge serial to TCP:
+   ```bash
+   ./run.sh
+   ```
+3. Or manually:
+   ```bash
+   socat /dev/ttyUSB0,raw,echo=0,nonblock,min=0,b9600,parenb tcp-listen:7001,reuseaddr &
+   python3 samsung_mqtt_home_assistant.py --serial-host 127.0.0.1 --serial-port 7001
+   ```
+
+### Method 2: Direct TCP connection
+This method connects directly to an Ethernet-to-RS485 converter without needing `socat`.
+
+**Setup:**
+1. Configure your Ethernet-to-RS485 converter with:
+   - IP address (e.g., 192.168.1.100)
+   - TCP port (e.g., 8080)
+   - Serial settings: 9600 baud, even parity
+2. Run the application pointing to your converter:
+   ```bash
+   python3 samsung_mqtt_home_assistant.py --serial-host 192.168.1.100 --serial-port 8080
+   ```
+
+**Note:** Despite the parameter names (`--serial-host` and `--serial-port`), the application always uses TCP sockets for communication. The names are kept for backward compatibility.
+
 ## How to manual run
 Just execute the samsung_mqtt_home_assistant.py script after tweaking its values (extended configuration means to come)
 
