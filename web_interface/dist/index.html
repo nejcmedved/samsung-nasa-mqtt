@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Samsung NASA MQTT Monitor</title>
-    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -20,7 +18,7 @@
             padding: 20px;
         }
 
-        #app {
+        .container {
             max-width: 1400px;
             margin: 0 auto;
         }
@@ -214,23 +212,27 @@
         .empty-state p {
             color: #9ca3af;
         }
+
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <div id="app">
+    <div class="container">
         <div class="header">
             <h1>🛰️ Samsung NASA MQTT Monitor</h1>
             <p>Real-time monitoring of NASA protocol values</p>
             <div class="status">
                 <div class="status-item">
-                    <div class="status-indicator" :class="wsConnected ? 'connected' : 'disconnected'"></div>
-                    <span>{{ wsConnected ? 'Connected' : 'Disconnected' }}</span>
+                    <div class="status-indicator" id="statusIndicator"></div>
+                    <span id="statusText">Connecting...</span>
                 </div>
                 <div class="status-item">
-                    <span><strong>{{ Object.keys(nasaState).length }}</strong> values</span>
+                    <span><strong id="valueCount">0</strong> values</span>
                 </div>
                 <div class="status-item">
-                    <span>Last update: {{ lastUpdate }}</span>
+                    <span>Last update: <span id="lastUpdate">Never</span></span>
                 </div>
             </div>
         </div>
@@ -239,179 +241,204 @@
             <h2>Controls</h2>
             <input 
                 type="text" 
-                v-model="filterText" 
+                id="filterInput"
                 placeholder="Filter by key name (e.g., 'temp', '0x4', 'zone')..."
                 class="filter-input"
             >
             <div class="control-buttons">
-                <button @click="refreshData" class="btn btn-primary">🔄 Refresh</button>
-                <button @click="sortByKey" class="btn btn-primary">🔤 Sort by Key</button>
-                <button @click="sortByValue" class="btn btn-primary">🔢 Sort by Value</button>
-                <button @click="clearFilter" class="btn btn-primary">✖️ Clear Filter</button>
+                <button onclick="app.refresh()" class="btn btn-primary">🔄 Refresh</button>
+                <button onclick="app.sortByKey()" class="btn btn-primary">🔤 Sort by Key</button>
+                <button onclick="app.sortByValue()" class="btn btn-primary">🔢 Sort by Value</button>
+                <button onclick="app.clearFilter()" class="btn btn-primary">✖️ Clear Filter</button>
             </div>
         </div>
 
-        <div v-if="error" class="error">
-            <strong>Error:</strong> {{ error }}
+        <div id="errorBox" class="error hidden">
+            <strong>Error:</strong> <span id="errorText"></span>
         </div>
 
-        <div v-if="loading" class="loading">
+        <div id="loadingBox" class="loading">
             Loading NASA state...
         </div>
 
-        <div v-else-if="filteredEntries.length === 0" class="empty-state">
+        <div id="emptyState" class="empty-state hidden">
             <h3>No data available</h3>
             <p>Waiting for NASA protocol data...</p>
         </div>
 
-        <div v-else class="data-grid">
-            <div 
-                v-for="[key, value] in filteredEntries" 
-                :key="key"
-                :class="['data-card', { 'updated': recentlyUpdated.has(key) }]"
-            >
-                <div class="data-key">{{ key }}</div>
-                <div class="data-value" :class="{ 'numeric': isNumeric(value) }">
-                    {{ formatValue(value) }}
-                </div>
-            </div>
+        <div id="dataGrid" class="data-grid">
         </div>
     </div>
 
     <script>
-        const { createApp } = Vue;
-
-        createApp({
-            data() {
-                return {
-                    nasaState: {},
-                    filterText: '',
-                    sortMode: 'none',
-                    loading: true,
-                    error: null,
-                    wsConnected: false,
-                    lastUpdate: 'Never',
-                    recentlyUpdated: new Set(),
-                    socket: null
-                }
-            },
-            computed: {
-                filteredEntries() {
-                    let entries = Object.entries(this.nasaState);
-                    
-                    // Filter
-                    if (this.filterText.trim()) {
-                        const filter = this.filterText.toLowerCase();
-                        entries = entries.filter(([key, value]) => 
-                            key.toLowerCase().includes(filter) ||
-                            String(value).toLowerCase().includes(filter)
-                        );
-                    }
-                    
-                    // Sort
-                    if (this.sortMode === 'key') {
-                        entries.sort((a, b) => a[0].localeCompare(b[0]));
-                    } else if (this.sortMode === 'value') {
-                        entries.sort((a, b) => String(a[1]).localeCompare(String(b[1])));
-                    }
-                    
-                    return entries;
-                }
-            },
-            methods: {
-                async refreshData() {
-                    try {
-                        this.loading = true;
-                        this.error = null;
-                        const response = await fetch('/api/state');
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        const data = await response.json();
-                        this.nasaState = data;
-                        this.updateTimestamp();
-                        this.loading = false;
-                    } catch (e) {
-                        this.error = e.message;
-                        this.loading = false;
-                    }
-                },
-                updateTimestamp() {
-                    const now = new Date();
-                    this.lastUpdate = now.toLocaleTimeString();
-                },
-                sortByKey() {
-                    this.sortMode = this.sortMode === 'key' ? 'none' : 'key';
-                },
-                sortByValue() {
-                    this.sortMode = this.sortMode === 'value' ? 'none' : 'value';
-                },
-                clearFilter() {
-                    this.filterText = '';
-                },
-                isNumeric(value) {
-                    return !isNaN(value) && !isNaN(parseFloat(value));
-                },
-                formatValue(value) {
-                    if (value === null || value === undefined) {
-                        return 'N/A';
-                    }
-                    return String(value);
-                },
-                connectWebSocket() {
-                    // Try to connect to WebSocket for real-time updates
-                    try {
-                        this.socket = io({
-                            reconnection: true,
-                            reconnectionDelay: 1000,
-                            reconnectionAttempts: Infinity
-                        });
-                        
-                        this.socket.on('connect', () => {
-                            this.wsConnected = true;
-                            console.log('WebSocket connected');
-                        });
-                        
-                        this.socket.on('disconnect', () => {
-                            this.wsConnected = false;
-                            console.log('WebSocket disconnected');
-                        });
-                        
-                        this.socket.on('state_update', (data) => {
-                            // Track what changed
-                            const changed = new Set();
-                            for (const key in data) {
-                                if (this.nasaState[key] !== data[key]) {
-                                    changed.add(key);
-                                }
-                            }
-                            
-                            this.nasaState = data;
-                            this.updateTimestamp();
-                            
-                            // Highlight changed values
-                            this.recentlyUpdated = changed;
-                            setTimeout(() => {
-                                this.recentlyUpdated = new Set();
-                            }, 500);
-                        });
-                    } catch (e) {
-                        console.error('WebSocket connection failed:', e);
-                    }
-                }
-            },
-            mounted() {
-                this.refreshData();
-                this.connectWebSocket();
+        const app = {
+            nasaState: {},
+            filterText: '',
+            sortMode: 'none',
+            lastUpdateTime: null,
+            
+            init() {
+                // Set up event listeners
+                document.getElementById('filterInput').addEventListener('input', (e) => {
+                    this.filterText = e.target.value;
+                    this.render();
+                });
                 
-                // Fallback: refresh every 5 seconds if WebSocket is not connected
-                setInterval(() => {
-                    if (!this.wsConnected) {
-                        this.refreshData();
+                // Initial load
+                this.refresh();
+                
+                // Auto-refresh every 2 seconds
+                setInterval(() => this.refresh(), 2000);
+            },
+            
+            async refresh() {
+                try {
+                    const response = await fetch('/api/state');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                }, 5000);
+                    const data = await response.json();
+                    
+                    // Track which values changed
+                    const changedKeys = new Set();
+                    for (const key in data) {
+                        if (this.nasaState[key] !== data[key]) {
+                            changedKeys.add(key);
+                        }
+                    }
+                    
+                    this.nasaState = data;
+                    this.lastUpdateTime = new Date();
+                    this.updateStatus(true);
+                    this.hideError();
+                    this.hideLoading();
+                    this.render(changedKeys);
+                } catch (e) {
+                    this.showError(e.message);
+                    this.updateStatus(false);
+                    this.hideLoading();
+                }
+            },
+            
+            render(changedKeys = new Set()) {
+                const grid = document.getElementById('dataGrid');
+                const entries = this.getFilteredEntries();
+                
+                if (entries.length === 0) {
+                    grid.innerHTML = '';
+                    document.getElementById('emptyState').classList.remove('hidden');
+                    return;
+                }
+                
+                document.getElementById('emptyState').classList.add('hidden');
+                
+                grid.innerHTML = entries.map(([key, value]) => {
+                    const isNumeric = !isNaN(value) && !isNaN(parseFloat(value));
+                    const changed = changedKeys.has(key);
+                    return `
+                        <div class="data-card ${changed ? 'updated' : ''}">
+                            <div class="data-key">${this.escapeHtml(key)}</div>
+                            <div class="data-value ${isNumeric ? 'numeric' : ''}">
+                                ${this.escapeHtml(this.formatValue(value))}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                // Update value count
+                document.getElementById('valueCount').textContent = Object.keys(this.nasaState).length;
+            },
+            
+            getFilteredEntries() {
+                let entries = Object.entries(this.nasaState);
+                
+                // Filter
+                if (this.filterText.trim()) {
+                    const filter = this.filterText.toLowerCase();
+                    entries = entries.filter(([key, value]) => 
+                        key.toLowerCase().includes(filter) ||
+                        String(value).toLowerCase().includes(filter)
+                    );
+                }
+                
+                // Sort
+                if (this.sortMode === 'key') {
+                    entries.sort((a, b) => a[0].localeCompare(b[0]));
+                } else if (this.sortMode === 'value') {
+                    entries.sort((a, b) => String(a[1]).localeCompare(String(b[1])));
+                }
+                
+                return entries;
+            },
+            
+            sortByKey() {
+                this.sortMode = this.sortMode === 'key' ? 'none' : 'key';
+                this.render();
+            },
+            
+            sortByValue() {
+                this.sortMode = this.sortMode === 'value' ? 'none' : 'value';
+                this.render();
+            },
+            
+            clearFilter() {
+                this.filterText = '';
+                document.getElementById('filterInput').value = '';
+                this.render();
+            },
+            
+            formatValue(value) {
+                if (value === null || value === undefined) {
+                    return 'N/A';
+                }
+                return String(value);
+            },
+            
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            },
+            
+            updateStatus(connected) {
+                const indicator = document.getElementById('statusIndicator');
+                const statusText = document.getElementById('statusText');
+                
+                if (connected) {
+                    indicator.classList.add('connected');
+                    indicator.classList.remove('disconnected');
+                    statusText.textContent = 'Connected';
+                } else {
+                    indicator.classList.add('disconnected');
+                    indicator.classList.remove('connected');
+                    statusText.textContent = 'Disconnected';
+                }
+                
+                if (this.lastUpdateTime) {
+                    document.getElementById('lastUpdate').textContent = this.lastUpdateTime.toLocaleTimeString();
+                }
+            },
+            
+            showError(message) {
+                document.getElementById('errorText').textContent = message;
+                document.getElementById('errorBox').classList.remove('hidden');
+            },
+            
+            hideError() {
+                document.getElementById('errorBox').classList.add('hidden');
+            },
+            
+            hideLoading() {
+                document.getElementById('loadingBox').classList.add('hidden');
             }
-        }).mount('#app');
+        };
+        
+        // Initialize app when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => app.init());
+        } else {
+            app.init();
+        }
     </script>
 </body>
 </html>
