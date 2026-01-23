@@ -17,7 +17,7 @@ import logging
 import signal
 import tools
 import packetgateway
-from nasa_messages import NasaPacketParser, nasa_log_packet
+from nasa_messages import NasaPacketParser
 
 # Set up logging
 LOGFORMAT = '%(asctime)s %(levelname)s %(message)s'
