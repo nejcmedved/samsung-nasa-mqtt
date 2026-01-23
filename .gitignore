@@ -18,3 +18,12 @@ ENV/
 # OS
 .DS_Store
 Thumbs.db
+
+# Node.js (for any future npm-based builds)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build artifacts
+*.log
+*.pid

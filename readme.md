@@ -71,6 +71,40 @@ The test tool is useful for:
 
 For full documentation, see [NASA_TEST_TOOL.md](NASA_TEST_TOOL.md).
 
+## Web Interface for Local Monitoring
+
+A modern web interface is available for real-time monitoring of NASA protocol values locally:
+
+```bash
+# Run the main application with web interface enabled
+python3 run_with_web_interface.py --mqtt-host localhost --web-port 5000
+
+# Then open in your browser: http://localhost:5000
+```
+
+Features:
+- **Real-time Updates**: Auto-refreshing display of all NASA state values
+- **Interactive Dashboard**: Modern, responsive UI with card-based layout
+- **Filtering & Sorting**: Search and organize values by key or value
+- **Visual Feedback**: Animated highlights when values change
+- **Connection Status**: Real-time connection monitoring
+
+For complete documentation, see [WEB_INTERFACE_README.md](WEB_INTERFACE_README.md).
+
+## Serial Line Monitor
+
+A simple read-only tool for monitoring serial line communication:
+
+```bash
+# Monitor the serial line and parse NASA packets
+python3 serial_monitor.py --host 127.0.0.1 --port 7001
+
+# Monitor with raw data only (no parsing)
+python3 serial_monitor.py --host 127.0.0.1 --port 7001 --no-parse
+```
+
+This tool is useful for debugging and testing NASA protocol communication without sending any data.
+
 ## How to manual run
 Just execute the samsung_mqtt_home_assistant.py script after tweaking its values (extended configuration means to come)
 
