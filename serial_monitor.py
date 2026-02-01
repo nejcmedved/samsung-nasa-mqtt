@@ -164,9 +164,9 @@ class SerialMonitor:
         print(f"  Data Type: {payloadType}")
         print(f"  Packet Number: {packetNumber}")
         
-        # Display message count (capacity)
+        # Display message count (capacity) - field at index 9 in NASA packet structure
         if dataSets and packet and len(packet) > 9:
-            capacity = packet[9]
+            capacity = packet[9]  # Capacity field per NASA protocol spec
             print(f"  Capacity (Number of Messages): {capacity}")
         
         if dataSets:
@@ -176,8 +176,9 @@ class SerialMonitor:
                 msgname = ds[1]
                 msgvalue = ds[2]
                 
-                # Determine message type from message number
+                # Determine message type from message number (bits 9-10)
                 msg_type = (msgnum & 0x600) >> 9
+                # msg_type is always 0-3 per NASA protocol: 0=1byte, 1=2bytes, 2=4bytes, 3=structure
                 msg_type_desc = ["1 byte", "2 bytes", "4 bytes", "structure"][msg_type]
                 
                 # Display with type information
