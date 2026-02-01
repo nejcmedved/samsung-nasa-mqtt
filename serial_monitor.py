@@ -80,20 +80,101 @@ class SerialMonitor:
         payloadType = kwargs.get("payloadType")
         packetNumber = kwargs.get("packetNumber")
         dataSets = kwargs.get("dataSets")
+        isInfo = kwargs.get("isInfo")
+        protocolVersion = kwargs.get("protocolVersion")
+        retryCounter = kwargs.get("retryCounter")
+        packet = kwargs.get("packet")
         
-        print(f"  Source: {tools.bin2hex(source)}")
-        print(f"  Destination: {tools.bin2hex(dest)}")
+        # Address Class mapping based on NASA protocol specification
+        address_class_map = {
+            0x10: "Outdoor",
+            0x11: "HTU", 
+            0x20: "Indoor",
+            0x30: "ERV",
+            0x35: "Diffuser",
+            0x38: "MCU",
+            0x40: "RMC",
+            0x50: "WiredRemote",
+            0x51: "WiredRemote",  # Alternative wired remote address
+            0x58: "PIM",
+            0x59: "SIM",
+            0x5A: "Peak",
+            0x5B: "PowerDivider",
+            0xB0: "EHS",
+        }
+        
+        # Parse source and destination addresses
+        if len(source) >= 3:
+            src_class = source[0]
+            src_channel = source[1]
+            src_address = source[2]
+            src_class_name = address_class_map.get(src_class, f"Unknown(0x{src_class:02x})")
+            print(f"  Source: {tools.bin2hex(source)}")
+            print(f"    - Address Class: {src_class_name} (0x{src_class:02x})")
+            print(f"    - Channel: 0x{src_channel:02x}")
+            print(f"    - Address: 0x{src_address:02x}")
+        
+        if len(dest) >= 3:
+            dst_class = dest[0]
+            dst_channel = dest[1]
+            dst_address = dest[2]
+            dst_class_name = address_class_map.get(dst_class, f"Unknown(0x{dst_class:02x})")
+            print(f"  Destination: {tools.bin2hex(dest)}")
+            print(f"    - Address Class: {dst_class_name} (0x{dst_class:02x})")
+            print(f"    - Channel: 0x{dst_channel:02x}")
+            print(f"    - Address: 0x{dst_address:02x}")
+        
+        # Display packet information
+        print(f"  Packet Information:")
+        print(f"    - Packet Info Flag: {isInfo}")
+        print(f"    - Protocol Version: {protocolVersion}")
+        print(f"    - Retry Count: {retryCounter}")
+        
+        # Display packet type and data type with their numeric values
+        packet_type_map = {
+            0: "StandBy",
+            1: "Normal",
+            2: "Gathering", 
+            3: "Install",
+            4: "Download"
+        }
+        
+        data_type_map = {
+            0: "Undefined",
+            1: "Read",
+            2: "Write",
+            3: "Request",
+            4: "Notification",
+            5: "Response",
+            6: "Ack",
+            7: "Nack"
+        }
+        
         print(f"  Packet Type: {packetType}")
-        print(f"  Payload Type: {payloadType}")
+        print(f"  Data Type: {payloadType}")
         print(f"  Packet Number: {packetNumber}")
         
+        # Display message count (capacity)
+        if dataSets and packet and len(packet) > 9:
+            capacity = packet[9]
+            print(f"  Capacity (Number of Messages): {capacity}")
+        
         if dataSets:
-            print(f"  Data Sets ({len(dataSets)}):")
+            print(f"  Messages ({len(dataSets)}):")
             for i, ds in enumerate(dataSets):
                 msgnum = ds[0]
                 msgname = ds[1]
                 msgvalue = ds[2]
-                print(f"    [{i+1}] {msgname} (0x{msgnum:04x}): {msgvalue}")
+                
+                # Determine message type from message number
+                msg_type = (msgnum & 0x600) >> 9
+                msg_type_desc = ["1 byte", "2 bytes", "4 bytes", "structure"][msg_type]
+                
+                # Display with type information
+                print(f"    [{i+1}] Message Number: 0x{msgnum:04x}")
+                print(f"        Name: {msgname}")
+                print(f"        Type: {msg_type_desc} payload")
+                print(f"        Value: {msgvalue}")
     
     def connect(self):
         """Connect to the serial line"""
