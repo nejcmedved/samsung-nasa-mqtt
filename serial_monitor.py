@@ -2,12 +2,22 @@
 """
 Serial Line Monitor Tool
 
-A simple read-only serial line monitoring tool for NASA protocol communication.
-This tool connects to the serial line and displays all received data in real-time.
+A read-only serial line monitoring tool for NASA protocol communication with
+detailed packet structure analysis.
+
+This tool displays all NASA packet fields according to the protocol specification:
+- Packet start/end markers (0x32/0x34)
+- Source/Destination addressing (Address Class, Channel, Address)
+- Packet information (Protocol Version, Retry Count)
+- Packet Type (StandBy, Normal, Gathering, Install, Download)
+- Data Type (Read, Write, Request, Notification, Response, Ack, Nack)
+- Message payload with type classification (1-byte, 2-byte, 4-byte, structure)
 
 Usage:
     python serial_monitor.py --host 127.0.0.1 --port 7001
     python serial_monitor.py --host 192.168.1.100 --port 8080
+    python serial_monitor.py --host 127.0.0.1 --port 7001 --no-parse
+    python serial_monitor.py --host 127.0.0.1 --port 7001 --log-level DEBUG
 """
 
 import argparse

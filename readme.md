@@ -93,17 +93,31 @@ For complete documentation, see [WEB_INTERFACE_README.md](WEB_INTERFACE_README.m
 
 ## Serial Line Monitor
 
-A simple read-only tool for monitoring serial line communication:
+A read-only tool for monitoring and analyzing NASA protocol communication in real-time:
 
 ```bash
-# Monitor the serial line and parse NASA packets
+# Monitor the serial line with detailed packet parsing
 python3 serial_monitor.py --host 127.0.0.1 --port 7001
 
 # Monitor with raw data only (no parsing)
 python3 serial_monitor.py --host 127.0.0.1 --port 7001 --no-parse
+
+# Adjust log level for more/less verbose output
+python3 serial_monitor.py --host 127.0.0.1 --port 7001 --log-level DEBUG
 ```
 
-This tool is useful for debugging and testing NASA protocol communication without sending any data.
+**Features:**
+- **Detailed Packet Structure Display**: Shows all NASA packet fields according to the protocol specification
+  - Source/Destination Address breakdown (Address Class, Channel, Address)
+  - Address Class identification (Indoor, Outdoor, EHS, WiredRemote, etc.)
+  - Packet Information fields (Protocol Version, Retry Count, Packet Info Flag)
+  - Packet Type and Data Type with their meanings
+  - Message payload type classification (1-byte, 2-byte, 4-byte, or structure)
+- **Hex Dump**: Optional formatted hex dump of raw packet data
+- **Real-time Monitoring**: Timestamped display of all packets as they arrive
+- **Read-only Mode**: Safe monitoring without any transmission to the bus
+
+This tool is essential for debugging NASA protocol communication, understanding packet structure, and developing new features.
 
 ## How to manual run
 Just execute the samsung_mqtt_home_assistant.py script after tweaking its values (extended configuration means to come)
